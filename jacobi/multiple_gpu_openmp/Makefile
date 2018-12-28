@@ -1,5 +1,5 @@
 CCOMP = pgcc
-CFLAGS = -Minfo=acc -ta=tesla:cc70 -fast
+CFLAGS = -acc -Minfo=acc -ta=tesla:cc70 -mp -fast
 
 run: poisson2d.o
 	$(CCOMP) $(CFLAGS) poisson2d.o -o run
