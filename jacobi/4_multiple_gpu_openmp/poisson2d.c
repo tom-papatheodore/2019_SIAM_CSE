@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     acc_set_device_num(device_num, acc_device_nvidia);
 #endif /* _OPENACC */
 
-	#pragma acc kernels 
+//	#pragma acc kernels 
 	// set A and A_ref 
     for(int iy = 0; iy < NY; iy++)
     {
