@@ -33,25 +33,24 @@
 #define NY 2048
 #define NX 2048
 
-double A[NX][NY];
-double Anew[NX][NY];
-double rhs[NX][NY];
+double A[NY][NX];
+double Anew[NY][NX];
+double rhs[NY][NX];
+
+double A_ref[NY][NX];
+double Anew_ref[NY][NX];
+
+#include "poisson2d_serial.h"
+void poisson2d_serial(int , double);
 
 int main(int argc, char** argv)
 {
     int iter_max = 1000;
     const double tol = 1.0e-5;
 
-	struct timeval start_time, stop_time, elapsed_time;
-//    gettimeofday(&start_time, NULL);
+	struct timeval start_time, stop_time, elapsed_time_serial, elapsed_time_parallel;
 
-    memset(A, 0, NY * NX * sizeof(double));
-   
-	#pragma acc data copy(A[0:NY][0:NX]) create(rhs[0:NY][0:NX], Anew[0:NY][0:NX])
-	{
- 
     // set rhs
-    #pragma acc kernels
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -61,8 +60,28 @@ int main(int argc, char** argv)
             rhs[iy][ix] = exp(-10.0*(x*x + y*y));
         }
     }
-    
-    printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
+  
+	// set A and A_ref 
+    for(int iy = 0; iy < NY; iy++)
+    {
+        for(int ix = 0; ix < NX; ix++)
+        {
+            A_ref[iy][ix] = 0.0;
+            A[iy][ix]    = 0.0;
+        }
+    }
+
+	printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
+
+	// Serial Execution
+	printf("Serial Execution...\n");
+	gettimeofday(&start_time, NULL);
+    poisson2d_serial(iter_max, tol);
+    gettimeofday(&stop_time, NULL);
+    timersub(&stop_time, &start_time, &elapsed_time_serial);
+
+	// Parallel Execution
+	printf("Parallel Execution...\n"); 
 	gettimeofday(&start_time, NULL);
 
     int iter  = 0;
@@ -110,12 +129,13 @@ int main(int argc, char** argv)
         
         iter++;
     }
-	}
 
 	gettimeofday(&stop_time, NULL);
-	timersub(&stop_time, &start_time, &elapsed_time);
+	timersub(&stop_time, &start_time, &elapsed_time_parallel);
 
-	printf("%dx%d: 1 CPU: %8.4f s\n", NY, NX, elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+	double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
+    double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
+    printf("Elapsed Time (s) - Serial: %8.4f, Parallel: %8.4f, Speedup: %8.4f\n", runtime_serial, runtime_parallel, runtime_serial/runtime_parallel);
 
     return 0;
 }

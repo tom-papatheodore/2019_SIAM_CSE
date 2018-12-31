@@ -43,7 +43,6 @@ int main(int argc, char** argv)
     const double tol = 1.0e-5;
 
 	struct timeval start_time, stop_time, elapsed_time;
-    gettimeofday(&start_time, NULL);
 
     memset(A, 0, NY * NX * sizeof(double));
     
@@ -57,8 +56,17 @@ int main(int argc, char** argv)
             rhs[iy][ix] = exp(-10.0*(x*x + y*y));
         }
     }
+
+    for(int iy = 0; iy < NY; iy++)
+    {
+        for(int ix = 0; ix < NX; ix++)
+        {
+            A[iy][ix]    = 0.0;
+        }
+    }
     
     printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
+	gettimeofday(&start_time, NULL);
 
     int iter  = 0;
     double error = 1.0;
@@ -105,7 +113,8 @@ int main(int argc, char** argv)
 	gettimeofday(&stop_time, NULL);
 	timersub(&stop_time, &start_time, &elapsed_time);
 
-	printf("%dx%d: 1 CPU: %8.4f s\n", NY, NX, elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
+	double runtime = elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0;
+	printf("Elapsed Time (s): %8.4f\n", runtime);
 
     return 0;
 }

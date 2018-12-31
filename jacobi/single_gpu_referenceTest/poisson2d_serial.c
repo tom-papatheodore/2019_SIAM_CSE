@@ -25,45 +25,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <math.h>
-#include <string.h>
-#include <stdio.h>
-#include <sys/time.h>
+#include "common.h"
 
-#define NY 2048
-#define NX 2048
-
-double A[NX][NY];
-double Anew[NX][NY];
-double rhs[NX][NY];
-
-int main(int argc, char** argv)
+void poisson2d_serial(int iter_max, const double tol)
 {
-    int iter_max = 1000;
-    const double tol = 1.0e-5;
 
-	struct timeval start_time, stop_time, elapsed_time;
-//    gettimeofday(&start_time, NULL);
-
-    memset(A, 0, NY * NX * sizeof(double));
-   
-	#pragma acc data copy(A[0:NY][0:NX]) create(rhs[0:NY][0:NX], Anew[0:NY][0:NX])
-	{
- 
-    // set rhs
-    #pragma acc kernels
-    for (int iy = 1; iy < NY-1; iy++)
-    {
-        for( int ix = 1; ix < NX-1; ix++ )
-        {
-            const double x = -1.0 + (2.0*ix/(NX-1));
-            const double y = -1.0 + (2.0*iy/(NY-1));
-            rhs[iy][ix] = exp(-10.0*(x*x + y*y));
-        }
-    }
-    
-    printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
-	gettimeofday(&start_time, NULL);
+	printf("iter_max = %d, tol = %f\n", iter_max, tol);
+	printf("NX = %d, NY = %d\n", NX, NY);
 
     int iter  = 0;
     double error = 1.0;
@@ -72,7 +40,6 @@ int main(int argc, char** argv)
     {
         error = 0.0;
 
-		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
             for( int ix = 1; ix < NX-1; ix++ )
@@ -83,7 +50,6 @@ int main(int argc, char** argv)
             }
         }
         
-		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
             for( int ix = 1; ix < NX-1; ix++ )
@@ -93,13 +59,11 @@ int main(int argc, char** argv)
         }
         
         //Periodic boundary conditions
-		#pragma acc kernels
         for( int ix = 1; ix < NX-1; ix++ )
         {
                 A[0][ix]      = A[(NY-2)][ix];
                 A[(NY-1)][ix] = A[1][ix];
         }
-		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
                 A[iy][0]      = A[iy][(NX-2)];
@@ -110,12 +74,5 @@ int main(int argc, char** argv)
         
         iter++;
     }
-	}
 
-	gettimeofday(&stop_time, NULL);
-	timersub(&stop_time, &start_time, &elapsed_time);
-
-	printf("%dx%d: 1 CPU: %8.4f s\n", NY, NX, elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0);
-
-    return 0;
 }
