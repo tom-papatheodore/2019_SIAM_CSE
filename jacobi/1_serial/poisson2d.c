@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
 	struct timeval start_time, stop_time, elapsed_time;
 
-    // set rhs
+    // Set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -55,6 +55,7 @@ int main(int argc, char** argv)
         }
     }
 
+	// Set A
     for(int iy = 0; iy < NY; iy++)
     {
         for(int ix = 0; ix < NX; ix++)
@@ -64,6 +65,8 @@ int main(int argc, char** argv)
     }
     
     printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
+
+	// Start timer
 	gettimeofday(&start_time, NULL);
 
     int iter  = 0;
@@ -108,10 +111,11 @@ int main(int argc, char** argv)
         iter++;
     }
 
+	// Stop timer
 	gettimeofday(&stop_time, NULL);
 	timersub(&stop_time, &start_time, &elapsed_time);
-
 	double runtime = elapsed_time.tv_sec+elapsed_time.tv_usec/1000000.0;
+
 	printf("Elapsed Time (s): %8.4f\n", runtime);
 
     return 0;
