@@ -30,8 +30,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#define NY 2048
-#define NX 2048
+#define NY 4096
+#define NX 4096
 
 double A[NY][NX];
 double Anew[NY][NX];
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 
 	struct timeval start_time, stop_time, elapsed_time_serial, elapsed_time_parallel;
 
-    // set rhs
+    // Set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         }
     }
   
-	// set A and A_ref 
+	// Set A and A_ref 
     for(int iy = 0; iy < NY; iy++)
     {
         for(int ix = 0; ix < NX; ix++)
@@ -135,6 +135,7 @@ int main(int argc, char** argv)
 
 	double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
     double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
+
     printf("Elapsed Time (s) - Serial: %8.4f, Parallel: %8.4f, Speedup: %8.4f\n", runtime_serial, runtime_parallel, runtime_serial/runtime_parallel);
 
     return 0;
