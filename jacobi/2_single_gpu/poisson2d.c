@@ -30,8 +30,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#define NY 4096
-#define NX 4096
+#define NY 1024
+#define NX 1024
 
 double A[NY][NX];
 double Anew[NY][NX];
@@ -45,12 +45,20 @@ void poisson2d_serial(int , double);
 
 int main(int argc, char** argv)
 {
+	// Set to 1 to run serial test, otherwise 0
+	int serial_test = 0;
+
     int iter_max = 1000;
     const double tol = 1.0e-5;
 
 	struct timeval start_time, stop_time, elapsed_time_serial, elapsed_time_parallel;
 
-    // Set rhs
+
+	/* ---------------------------------------------
+		Initialize Arrays
+	--------------------------------------------- */
+
+	// Set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -61,7 +69,7 @@ int main(int argc, char** argv)
         }
     }
   
-	// Set A and A_ref 
+	// Set A
     for(int iy = 0; iy < NY; iy++)
     {
         for(int ix = 0; ix < NX; ix++)
@@ -73,20 +81,36 @@ int main(int argc, char** argv)
 
 	printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
 
-	// Serial Execution
-	printf("Serial Execution...\n");
-	gettimeofday(&start_time, NULL);
-    poisson2d_serial(iter_max, tol);
-    gettimeofday(&stop_time, NULL);
-    timersub(&stop_time, &start_time, &elapsed_time_serial);
+    /* ---------------------------------------------
+        Optional serial execution
+    --------------------------------------------- */
+	if(serial_test == 1)
+	{
+		printf("Serial Execution...\n");
 
-	// Parallel Execution
+		// Start serial timer
+		gettimeofday(&start_time, NULL);
+
+		// Run serial version
+		poisson2d_serial(iter_max, tol);
+
+		// Stop serial timer
+		gettimeofday(&stop_time, NULL);
+    	timersub(&stop_time, &start_time, &elapsed_time_serial);
+	}
+
+    /* ---------------------------------------------
+        Parallel Execution
+    --------------------------------------------- */
 	printf("Parallel Execution...\n"); 
+
+	// Start parallel timer
 	gettimeofday(&start_time, NULL);
 
     int iter  = 0;
     double error = 1.0;
-    
+   
+	// Main iteration loop 
     while ( error > tol && iter < iter_max )
     {
         error = 0.0;
@@ -130,13 +154,39 @@ int main(int argc, char** argv)
         iter++;
     }
 
+	// Stop parallel timer
 	gettimeofday(&stop_time, NULL);
 	timersub(&stop_time, &start_time, &elapsed_time_parallel);
 
-	double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
-    double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
+    /* ---------------------------------------------
+        Print timer results
+		If serial_test is 1, check for consistency
+    --------------------------------------------- */
+	if(serial_test == 1)
+	{
+    	// Compare A and A_ref 
+    	for(int iy = 0; iy < NY; iy++)
+    	{
+        	for(int ix = 0; ix < NX; ix++)
+        	{
+				if( abs(A_ref[iy][ix] - A[iy][ix]) > tol )
+				{
+					printf("A_ref[%d][%d] - A[%d][%d] = %f\n", iy, ix, iy, ix, A_ref[iy][ix] - A[iy][ix]);
+					printf("Exiting...\n");
+					exit();
+				}
+        	}
+    	}	
 
-    printf("Elapsed Time (s) - Serial: %8.4f, Parallel: %8.4f, Speedup: %8.4f\n", runtime_serial, runtime_parallel, runtime_serial/runtime_parallel);
+		double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
+		double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
+		printf("Elapsed Time (s) - Serial: %8.4f, Parallel: %8.4f, Speedup: %8.4f\n", runtime_serial, runtime_parallel, runtime_serial/runtime_parallel);
+	}
+	else
+	{
+    	double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
+		printf("Elapsed Time (s) - Parallel: %8.4f\n", runtime_parallel);
+	}
 
     return 0;
 }

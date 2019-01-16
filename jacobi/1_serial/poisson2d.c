@@ -30,8 +30,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#define NY 4096
-#define NX 4096
+#define NY 1024
+#define NX 1024
 
 double A[NX][NY];
 double Anew[NX][NY];
@@ -44,7 +44,11 @@ int main(int argc, char** argv)
 
 	struct timeval start_time, stop_time, elapsed_time;
 
-    // Set rhs
+    /* ---------------------------------------------
+        Initialize Arrays
+    --------------------------------------------- */
+
+	// Set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -66,12 +70,17 @@ int main(int argc, char** argv)
     
     printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
 
+    /* ---------------------------------------------
+        Serial Execution
+    --------------------------------------------- */
+
 	// Start timer
 	gettimeofday(&start_time, NULL);
 
     int iter  = 0;
     double error = 1.0;
-    
+   
+	// Main iteration loop 
     while ( error > tol && iter < iter_max )
     {
         error = 0.0;
