@@ -41,8 +41,8 @@
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 
-#define NY 2048
-#define NX 2048
+#define NY 4096
+#define NX 4096
 
 double A[NY][NX];
 double Anew[NY][NX];
