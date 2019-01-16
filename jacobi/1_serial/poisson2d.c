@@ -44,8 +44,6 @@ int main(int argc, char** argv)
 
 	struct timeval start_time, stop_time, elapsed_time;
 
-    memset(A, 0, NY * NX * sizeof(double));
-    
     // set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
