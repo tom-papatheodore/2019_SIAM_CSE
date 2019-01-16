@@ -53,7 +53,6 @@ int main(int argc, char** argv)
 
 	struct timeval start_time, stop_time, elapsed_time_serial, elapsed_time_parallel;
 
-
 	/* ---------------------------------------------
 		Initialize Arrays
 	--------------------------------------------- */

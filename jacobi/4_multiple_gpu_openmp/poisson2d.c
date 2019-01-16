@@ -69,14 +69,25 @@ int main(int argc, char** argv)
     #pragma omp parallel default(shared) firstprivate(num_threads, thread_num)
     {
 
+    /* ---------------------------------------------
+        Set up OpenMP and OpenACC and
+		initialize arrays
+    --------------------------------------------- */
+
 #ifdef _OPENMP
     num_threads = omp_get_num_threads();
     thread_num  = omp_get_thread_num();
 #endif /* _OPENMP */
 
+#ifdef _OPENACC
+    int num_devices = acc_get_num_devices(acc_device_nvidia);
+    int device_num  = thread_num % num_devices;
+    acc_set_device_num(device_num, acc_device_nvidia);
+#endif /* _OPENACC */
+
     #pragma omp master
     {
-    // set rhs
+    // Set rhs
     for (int iy = 1; iy < NY-1; iy++)
     {
         for( int ix = 1; ix < NX-1; ix++ )
@@ -86,16 +97,10 @@ int main(int argc, char** argv)
             rhs[iy][ix] = exp(-10.0*(x*x + y*y));
         }
     }
- 	}
+ 	} /* pragma omp master */
 
-#ifdef _OPENACC
-    int num_devices = acc_get_num_devices(acc_device_nvidia);
-    int device_num  = thread_num % num_devices;
-    acc_set_device_num(device_num, acc_device_nvidia);
-#endif /* _OPENACC */
-
-//	#pragma acc kernels 
-	// set A and A_ref 
+	// Set A and A_ref
+	#pragma acc kernels
     for(int iy = 0; iy < NY; iy++)
     {
         for(int ix = 0; ix < NX; ix++)
@@ -105,23 +110,35 @@ int main(int argc, char** argv)
         }
     }
 
+    /* ---------------------------------------------
+        Single-GPU execution
+    --------------------------------------------- */
     #pragma omp master
     {
 	printf("Jacobi relaxation Calculation: %d x %d mesh\n", NY, NX);
-	
-	// Serial Execution
-	printf("Serial Execution...\n");
+	printf("Single-GPU Execution...\n");
+
+	// Start single-GPU timer
 	gettimeofday(&start_time, NULL);
+
+	// Run single-GPU version
     poisson2d_serial(iter_max, tol);
+
+	// Stop single-GPU timer
     gettimeofday(&stop_time, NULL);
     timersub(&stop_time, &start_time, &elapsed_time_serial);
-	}
+	} /* pragma omp master */
 
 	#pragma omp barrier
+
+    /* ---------------------------------------------
+        Parallel Execution
+    --------------------------------------------- */
 	#pragma omp master
 	{
-	// Parallel Execution
 	printf("Parallel Execution...\n"); 
+
+	// Start parallel timer
 	gettimeofday(&start_time, NULL);
 	}
 
@@ -131,26 +148,25 @@ int main(int argc, char** argv)
     int ix_start = 1;
     int ix_end   = NX;
 
-    /* Use ceil function in case num_threads does not divide evenly into NY */
+    // Use ceil function in case num_threads does not divide evenly into NY
     int chunk_size = ceil((1.0*NY)/num_threads);
 
-    /* ---------------------------------------------------------------------- 
-        For each thread, these values are set so the loops below can iterate
-        from iy_start to iy_end-1, which include only the inner region of the 
-        domain that need to be calculated.
-
-        They are also used to set the ranges of data that each thread sends
-        to its GPU (including the halo region).
-     ----------------------------------------------------------------------*/
+	// For each thread, these values are set so the loops below can iterate
+	// from iy_start to iy_end-1, which include only the inner region of the 
+	// domain that need to be calculated.
+	//
+	// They are also used to set the ranges of data that each thread sends
+	// to its GPU (including the halo region).
     int iy_start = thread_num * chunk_size;
     int iy_end   = iy_start + chunk_size;
 
-    /* Only process inner region - not boundaries */
+    // Only process inner region - not boundaries
     iy_start = max(iy_start, 1);
     iy_end   = min(iy_end, NY-1);
  
 	#pragma acc data copy(A[(iy_start-1):(iy_end-iy_start)+2][0:NX]) copyin(rhs[iy_start:(iy_end-iy_start)][0:NX]) create(Anew[iy_start:(iy_end-iy_start)][0:NX])
 	{
+	// Main iteration loop
     while ( error > tol && iter < iter_max )
     {
 
@@ -228,10 +244,29 @@ int main(int argc, char** argv)
 	} /* #pragma acc data */
 
 	#pragma omp barrier
+
+    /* ---------------------------------------------
+        Stop parallel timer and print results
+    --------------------------------------------- */
 	#pragma omp master
 	{
+	// Stop parallel timer
 	gettimeofday(&stop_time, NULL);
 	timersub(&stop_time, &start_time, &elapsed_time_parallel);
+
+    // Compare A and A_ref 
+    for(int iy = 0; iy < NY; iy++)
+    {
+        for(int ix = 0; ix < NX; ix++)
+        {
+            if( abs(A_ref[iy][ix] - A[iy][ix]) > tol )
+            {
+                printf("A_ref[%d][%d] - A[%d][%d] = %f\n", iy, ix, iy, ix, A_ref[iy][ix] - A[iy][ix]);
+                printf("Exiting...\n");
+                exit;
+            }
+        }
+    }
 
 	double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
     double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;

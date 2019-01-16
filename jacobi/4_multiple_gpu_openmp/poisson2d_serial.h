@@ -29,11 +29,15 @@ void poisson2d_serial(int iter_max, double tol)
 {
     int iter  = 0;
     double error = 1.0;
-    
+   
+	#pragma acc data copyin(A_ref[0:NY][0:NX], rhs[0:NY][0:NX]) create(Anew_ref[0:NY][0:NX])
+	{
+ 
     while ( error > tol && iter < iter_max )
     {
         error = 0.0;
 
+		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
             for( int ix = 1; ix < NX-1; ix++ )
@@ -44,6 +48,7 @@ void poisson2d_serial(int iter_max, double tol)
             }
         }
         
+		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
             for( int ix = 1; ix < NX-1; ix++ )
@@ -53,11 +58,13 @@ void poisson2d_serial(int iter_max, double tol)
         }
         
         //Periodic boundary conditions
+		#pragma acc kernels
         for( int ix = 1; ix < NX-1; ix++ )
         {
                 A_ref[0][ix]      = A_ref[(NY-2)][ix];
                 A_ref[(NY-1)][ix] = A_ref[1][ix];
         }
+		#pragma acc kernels
         for (int iy = 1; iy < NY-1; iy++)
         {
                 A_ref[iy][0]      = A_ref[iy][(NX-2)];
@@ -68,5 +75,8 @@ void poisson2d_serial(int iter_max, double tol)
         
         iter++;
     }
+	
+	#pragma acc update self(A_ref)
+	} /* pragma acc data */
 
 }
