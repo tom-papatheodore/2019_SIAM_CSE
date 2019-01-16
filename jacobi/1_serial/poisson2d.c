@@ -30,8 +30,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#define NY 2048
-#define NX 2048
+#define NY 4096
+#define NX 4096
 
 double A[NX][NY];
 double Anew[NX][NY];
