@@ -132,6 +132,7 @@ int main(int argc, char** argv)
     if ( rank == 0) printf("Calculate reference solution and time serial execution.\n");
 	fflush(stdout);
 
+	if ( rank == 0){
 	// Serial Execution
 	printf("Serial Execution...\n");
 	fflush(stdout);
@@ -139,6 +140,7 @@ int main(int argc, char** argv)
     poisson2d_serial(iter_max, tol);
     gettimeofday(&stop_time, NULL);
     timersub(&stop_time, &start_time, &elapsed_time_serial);
+	}
 
     //MPI Warm-up to establish CUDA IPC connections
     for (int i=0; i<2; ++i)
@@ -215,7 +217,7 @@ int main(int argc, char** argv)
                 A[iy][(NX-1)] = A[iy][1];
         }
        
-        if(rank == 0 && (iter % 100) == 0) printf("%5d, %0.6f\n", iter, error);
+        if((rank == 0) && (iter % 100) == 0) printf("%5d, %0.6f\n", iter, error);
  
         iter++;
     }
@@ -227,7 +229,8 @@ int main(int argc, char** argv)
 	gettimeofday(&stop_time, NULL);
 	timersub(&stop_time, &start_time, &elapsed_time_parallel);
 
-	double runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;
+	double runtime_serial;
+	if (rank == 0) {runtime_serial   = elapsed_time_serial.tv_sec+elapsed_time_serial.tv_usec/1000000.0;}
     double runtime_parallel = elapsed_time_parallel.tv_sec+elapsed_time_parallel.tv_usec/1000000.0;
 	
 	if(rank == 0) printf("Elapsed Time (s) - Serial: %8.4f, Parallel: %8.4f, Speedup: %8.4f\n", runtime_serial, runtime_parallel, runtime_serial/runtime_parallel);

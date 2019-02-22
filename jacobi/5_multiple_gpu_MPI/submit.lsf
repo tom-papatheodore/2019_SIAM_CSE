@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#BSUB -P GEN117
+#BSUB -W 10
+#BSUB -nnodes 1
+#BSUB -J multi_gpu_6MPI
+#BSUB -o output_6MPI.%J
+#BSUB -e output_6MPI.%J
+
+jsrun --smpiargs="-gpu" -n1 -c42 -g6 -a6 ./run
